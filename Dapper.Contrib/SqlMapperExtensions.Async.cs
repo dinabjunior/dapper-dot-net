@@ -313,18 +313,19 @@ public partial class SqlServerAdapter
 {
     public async Task<int> InsertAsync(IDbConnection connection, IDbTransaction transaction, int? commandTimeout, String tableName, string columnList, string parameterList, IEnumerable<PropertyInfo> keyProperties, object entityToInsert)
     {
-        var cmd = $"INSERT INTO {tableName} ({columnList}) values ({parameterList}); SELECT SCOPE_IDENTITY() id";
+        var cmd = $"INSERT INTO {tableName} ({columnList}) output inserted.id values ({parameterList});";
         var multi = await connection.QueryMultipleAsync(cmd, entityToInsert, transaction, commandTimeout);
 
-        var first = multi.Read().FirstOrDefault();
-        if (first == null || first.id == null) return 0;
+        var first = multi.Read().FirstOrDefault() as IDictionary<string, object>;
+        if (first == null || first["id"] == null) return 0;
 
-        var id = (int)first.id;
+        int id;
+        int.TryParse(first["id"].ToString(), out id);
         var pi = keyProperties as PropertyInfo[] ?? keyProperties.ToArray();
         if (!pi.Any()) return id;
 
         var idp = pi.First();
-        idp.SetValue(entityToInsert, Convert.ChangeType(id, idp.PropertyType), null);
+        idp.SetValue(entityToInsert, Convert.ChangeType(first["id"], idp.PropertyType), null);
 
         return id;
     }

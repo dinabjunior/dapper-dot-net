@@ -699,18 +699,19 @@ public partial class SqlServerAdapter : ISqlAdapter
 {
     public int Insert(IDbConnection connection, IDbTransaction transaction, int? commandTimeout, string tableName, string columnList, string parameterList, IEnumerable<PropertyInfo> keyProperties, object entityToInsert)
     {
-        var cmd = $"insert into {tableName} ({columnList}) values ({parameterList});select SCOPE_IDENTITY() id";
+        var cmd = $"insert into {tableName} ({columnList}) output inserted.id values ({parameterList});";
         var multi = connection.QueryMultiple(cmd, entityToInsert, transaction, commandTimeout);
 
-        var first = multi.Read().FirstOrDefault();
-        if (first == null || first.id == null) return 0;
+        var first = multi.Read().FirstOrDefault() as IDictionary<string, object>;
+        if (first == null || first["id"] == null) return 0;
 
-        var id = (int)first.id;
+        int id;
+        int.TryParse(first["id"].ToString(), out id);
         var propertyInfos = keyProperties as PropertyInfo[] ?? keyProperties.ToArray();
         if (!propertyInfos.Any()) return id;
 
         var idProperty = propertyInfos.First();
-        idProperty.SetValue(entityToInsert, Convert.ChangeType(id, idProperty.PropertyType), null);
+        idProperty.SetValue(entityToInsert, Convert.ChangeType(first["id"], idProperty.PropertyType), null);
 
         return id;
     }
