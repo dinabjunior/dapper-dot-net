@@ -52,7 +52,7 @@ namespace Dapper.Contrib.Extensions
 
             foreach (var property in TypePropertiesCache(type))
             {
-                var val = res[property.Name];
+                var val = res[GetColumnName(type, property)];
                 property.SetValue(obj, Convert.ChangeType(val, property.PropertyType), null);
             }
 
@@ -102,7 +102,7 @@ namespace Dapper.Contrib.Extensions
                 var obj = ProxyGenerator.GetInterfaceProxy<T>();
                 foreach (var property in TypePropertiesCache(type))
                 {
-                    var val = res[property.Name];
+                    var val = res[GetColumnName(type, property)];
                     property.SetValue(obj, Convert.ChangeType(val, property.PropertyType), null);
                 }
                 ((IProxy)obj).IsDirty = false;   //reset change tracking and return
@@ -150,7 +150,7 @@ namespace Dapper.Contrib.Extensions
             for (var i = 0; i < allPropertiesExceptKeyAndComputed.Count; i++)
             {
                 var property = allPropertiesExceptKeyAndComputed.ElementAt(i);
-                sqlAdapter.AppendColumnName(sbColumnList, property.Name);
+                sqlAdapter.AppendColumnName(sbColumnList, GetColumnName(type, property));
                 if (i < allPropertiesExceptKeyAndComputed.Count - 1)
                     sbColumnList.Append(", ");
             }
@@ -223,7 +223,7 @@ namespace Dapper.Contrib.Extensions
             for (var i = 0; i < nonIdProps.Count; i++)
             {
                 var property = nonIdProps.ElementAt(i);
-                adapter.AppendColumnNameEqualsValue(sb, property.Name);
+                adapter.AppendColumnNameEqualsValue(sb, GetColumnName(type, property), property.Name);
                 if (i < nonIdProps.Count - 1)
                     sb.AppendFormat(", ");
             }
@@ -231,7 +231,7 @@ namespace Dapper.Contrib.Extensions
             for (var i = 0; i < keyProperties.Count; i++)
             {
                 var property = keyProperties.ElementAt(i);
-                adapter.AppendColumnNameEqualsValue(sb, property.Name);
+                adapter.AppendColumnNameEqualsValue(sb, GetColumnName(type, property), property.Name);
                 if (i < keyProperties.Count - 1)
                     sb.AppendFormat(" and ");
             }
@@ -278,7 +278,7 @@ namespace Dapper.Contrib.Extensions
             for (var i = 0; i < keyProperties.Count; i++)
             {
                 var property = keyProperties.ElementAt(i);
-                sb.AppendFormat("{0} = @{1}", property.Name, property.Name);
+                sb.AppendFormat("{0} = @{1}", GetColumnName(type, property), GetColumnName(type, property));
                 if (i < keyProperties.Count - 1)
                     sb.AppendFormat(" AND ");
             }
